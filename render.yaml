@@ -1,0 +1,138 @@
+# =====================================================================
+# Render Blueprint - Ciclo-Parqueadero
+# =====================================================================
+# Crea automáticamente:
+#   - PostgreSQL (auth_db)
+#   - auth-service        (web service Docker)
+#   - parqueadero-service (web service Docker)
+#   - frontend            (web service Docker, nginx)
+#
+# IMPORTANTE: Render NO ofrece MySQL.
+# Aprovisiona MySQL aparte (ej: Railway, Aiven o Clever Cloud) y rellena
+# las variables PARQUEADERO_DB_* abajo en el dashboard de Render.
+#
+# Pasos resumidos:
+#   1. Sube este repo a GitHub.
+#   2. Aprovisiona MySQL en Railway/Aiven y obtén host/puerto/usuario/password.
+#   3. En Render: New + → Blueprint → conecta el repo → "Apply".
+#   4. Cuando Render pida los valores marcados como `sync: false`, pégalos.
+#   5. Espera el deploy (~5-10 min).
+#   6. Abre la URL pública del frontend.
+# =====================================================================
+
+databases:
+  - name: cp-postgres
+    plan: free
+    databaseName: auth_db
+    user: cp_admin
+    region: oregon
+
+services:
+  # ---------------------------------------------------------------
+  # Microservicio de autenticación (Node + Postgres)
+  # ---------------------------------------------------------------
+  - type: web
+    name: cp-auth-service
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: auth-service
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4001
+      - key: DB_HOST
+        fromDatabase:
+          name: cp-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: cp-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: cp-postgres
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: cp-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: cp-postgres
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: ADMIN_NAME
+        value: Administrador
+      - key: ADMIN_EMAIL
+        value: admin@cicloparqueadero.com
+      - key: ADMIN_PASSWORD
+        value: Admin123!
+
+  # ---------------------------------------------------------------
+  # Microservicio del parqueadero (Node + MySQL externo)
+  # ---------------------------------------------------------------
+  - type: web
+    name: cp-parqueadero-service
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: parqueadero-service
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4002
+
+      # === Datos del MySQL externo (Railway / Aiven / Clever Cloud) ===
+      # Después de "Apply" en Render, te pedirá estos valores.
+      - key: DB_HOST
+        sync: false        # ej: containers-us-west-X.railway.app
+      - key: DB_PORT
+        sync: false        # ej: 3306
+      - key: DB_NAME
+        sync: false        # ej: parqueadero_db
+      - key: DB_USER
+        sync: false        # ej: root
+      - key: DB_PASSWORD
+        sync: false        # contraseña del MySQL externo
+
+      # Debe ser EXACTAMENTE el mismo JWT_SECRET de cp-auth-service.
+      - key: JWT_SECRET
+        fromService:
+          name: cp-auth-service
+          type: web
+          envVarKey: JWT_SECRET
+
+  # ---------------------------------------------------------------
+  # Frontend (React + Vite + nginx, configurado en runtime)
+  # ---------------------------------------------------------------
+  - type: web
+    name: cp-frontend
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: frontend
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: AUTH_API_URL
+        fromService:
+          name: cp-auth-service
+          type: web
+          property: host        # → https://cp-auth-service.onrender.com
+      - key: PARQUEADERO_API_URL
+        fromService:
+          name: cp-parqueadero-service
+          type: web
+          property: host        # → https://cp-parqueadero-service.onrender.com
