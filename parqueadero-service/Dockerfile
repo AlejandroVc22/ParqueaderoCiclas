@@ -1,15 +1,21 @@
-FROM node:20-alpine
+FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install --only=production
+COPY pom.xml ./
+RUN mvn -B -q -DskipTests dependency:go-offline
 
-COPY . .
+COPY src ./src
+RUN mvn -B -q -DskipTests package
 
-ENV NODE_ENV=production
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+
+COPY --from=build /app/target/parqueadero-service.jar app.jar
+
+ENV JAVA_OPTS="-Xms128m -Xmx512m"
 ENV PORT=4002
-
 EXPOSE 4002
 
-CMD ["node", "src/server.js"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

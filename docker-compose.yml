@@ -1,6 +1,6 @@
 services:
   # =========================================
-  # PostgreSQL - Base de datos del Auth
+  # PostgreSQL - BD del Auth (Spring Boot)
   # =========================================
   postgres:
     image: postgres:16-alpine
@@ -23,7 +23,7 @@ services:
       retries: 10
 
   # =========================================
-  # MySQL - Base de datos del Parqueadero
+  # MySQL - BD del Parqueadero (Spring Boot)
   # =========================================
   mysql:
     image: mysql:8.0
@@ -46,7 +46,7 @@ services:
       retries: 15
 
   # =========================================
-  # Microservicio Auth (Node + Postgres)
+  # Microservicio Auth (Spring Boot 3 + Postgres)
   # =========================================
   auth-service:
     build:
@@ -55,15 +55,14 @@ services:
     container_name: cp_auth_service
     restart: unless-stopped
     environment:
-      NODE_ENV: production
       PORT: 4001
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-auth_db}
       DB_USER: ${POSTGRES_USER:-postgres}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      JWT_SECRET: ${JWT_SECRET:-ciclo-parqueadero-super-secret-key-change-in-production}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      JWT_SECRET: ${JWT_SECRET:-ciclo-parqueadero-super-secret-key-change-in-production-please}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       ADMIN_NAME: ${ADMIN_NAME:-Administrador}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@cicloparqueadero.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
@@ -76,7 +75,7 @@ services:
       - cp_network
 
   # =========================================
-  # Microservicio Parqueadero (Node + MySQL)
+  # Microservicio Parqueadero (Spring Boot 3 + MySQL)
   # =========================================
   parqueadero-service:
     build:
@@ -85,14 +84,13 @@ services:
     container_name: cp_parqueadero_service
     restart: unless-stopped
     environment:
-      NODE_ENV: production
       PORT: 4002
       DB_HOST: mysql
       DB_PORT: 3306
       DB_NAME: ${MYSQL_DATABASE:-parqueadero_db}
       DB_USER: root
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
-      JWT_SECRET: ${JWT_SECRET:-ciclo-parqueadero-super-secret-key-change-in-production}
+      JWT_SECRET: ${JWT_SECRET:-ciclo-parqueadero-super-secret-key-change-in-production-please}
     ports:
       - "4002:4002"
     depends_on:
@@ -102,7 +100,7 @@ services:
       - cp_network
 
   # =========================================
-  # Frontend (React + Vite + Nginx)
+  # Frontend (Spring Boot + Thymeleaf)
   # =========================================
   frontend:
     build:
@@ -111,11 +109,11 @@ services:
     container_name: cp_frontend
     restart: unless-stopped
     environment:
-      PORT: 80
-      AUTH_API_URL: ${AUTH_API_URL:-http://localhost:4001}
-      PARQUEADERO_API_URL: ${PARQUEADERO_API_URL:-http://localhost:4002}
+      PORT: 8080
+      AUTH_API_URL: http://auth-service:4001
+      PARQUEADERO_API_URL: http://parqueadero-service:4002
     ports:
-      - "5173:80"
+      - "8080:8080"
     depends_on:
       - auth-service
       - parqueadero-service

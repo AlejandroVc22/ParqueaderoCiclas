@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<!-- ====================== HEAD compartido ====================== -->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${title} ?: 'Ciclo-Parqueadero'">Ciclo-Parqueadero</title>
+    <link rel="stylesheet" th:href="@{/css/main.css}" />
+</head>
+
+<!-- ====================== Sidebar ====================== -->
+<aside th:fragment="sidebar" class="sidebar">
+    <div class="sidebar-header">
+        <div class="brand">
+            <span class="brand-emoji">🚲</span>
+            <div>
+                <h1 class="brand-title">Ciclo</h1>
+                <p class="brand-subtitle">Parqueadero</p>
+            </div>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <p class="sidebar-section">Navegación</p>
+        <a th:href="@{/dashboard}" class="sidebar-link"
+           th:classappend="${#httpServletRequest.requestURI == '/dashboard'} ? ' active'">
+            <span class="icon-square">▦</span> <span>Dashboard</span>
+        </a>
+        <a th:href="@{/bicicletas}" class="sidebar-link"
+           th:classappend="${#strings.startsWith(#httpServletRequest.requestURI,'/bicicletas')} ? ' active'">
+            <span class="icon-square">🚲</span> <span>Bicicletas</span>
+        </a>
+        <a th:if="${currentUser != null and currentUser.admin}" th:href="@{/usuarios}" class="sidebar-link"
+           th:classappend="${#strings.startsWith(#httpServletRequest.requestURI,'/usuarios')} ? ' active'">
+            <span class="icon-square">👥</span> <span>Usuarios</span>
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-card">
+            <div class="user-avatar"
+                 th:text="${currentUser != null ? #strings.toUpperCase(#strings.substring(currentUser.nombre,0,1)) : 'U'}">A</div>
+            <div class="user-info">
+                <p class="user-name" th:text="${currentUser?.nombre}">Usuario</p>
+                <p class="user-role" th:text="${currentUser?.rol}">USER</p>
+            </div>
+        </div>
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="logout-btn">⎋ Cerrar sesión</button>
+        </form>
+    </div>
+</aside>
+
+<!-- ====================== Navbar ====================== -->
+<header th:fragment="navbar" class="navbar">
+    <div class="navbar-left">
+        <div>
+            <h2 class="navbar-title">
+                Bienvenido, <span th:text="${currentUser?.nombre} ?: 'Usuario'">Usuario</span>
+            </h2>
+            <p class="navbar-subtitle">Gestiona tu ciclo-parqueadero de forma simple y rápida</p>
+        </div>
+    </div>
+    <div class="navbar-right">
+        <div class="role-badge" th:attr="data-role=${currentUser?.rol}"
+             th:text="${currentUser?.rol} ?: '—'">USER</div>
+    </div>
+</header>
+
+<!-- ====================== Alerts (success / error) ====================== -->
+<div th:fragment="alerts" class="alerts-container">
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+</div>
+
+</html>

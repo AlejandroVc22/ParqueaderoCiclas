@@ -1,23 +1,15 @@
 # =====================================================================
-# Render Blueprint - Ciclo-Parqueadero
+# Render Blueprint - Ciclo-Parqueadero (Spring Boot)
 # =====================================================================
 # Crea automáticamente:
-#   - PostgreSQL (auth_db)
-#   - auth-service        (web service Docker)
-#   - parqueadero-service (web service Docker)
-#   - frontend            (web service Docker, nginx)
+#   - PostgreSQL          (cp-postgres)
+#   - auth-service        (Spring Boot 3 + Java 17)
+#   - parqueadero-service (Spring Boot 3 + Java 17)
+#   - frontend            (Spring Boot 3 + Thymeleaf)
 #
 # IMPORTANTE: Render NO ofrece MySQL.
-# Aprovisiona MySQL aparte (ej: Railway, Aiven o Clever Cloud) y rellena
-# las variables PARQUEADERO_DB_* abajo en el dashboard de Render.
-#
-# Pasos resumidos:
-#   1. Sube este repo a GitHub.
-#   2. Aprovisiona MySQL en Railway/Aiven y obtén host/puerto/usuario/password.
-#   3. En Render: New + → Blueprint → conecta el repo → "Apply".
-#   4. Cuando Render pida los valores marcados como `sync: false`, pégalos.
-#   5. Espera el deploy (~5-10 min).
-#   6. Abre la URL pública del frontend.
+# Aprovisiona MySQL aparte (Railway / Aiven / Clever Cloud) y rellena
+# las variables marcadas con `sync: false` en el dashboard de Render.
 # =====================================================================
 
 databases:
@@ -29,7 +21,7 @@ databases:
 
 services:
   # ---------------------------------------------------------------
-  # Microservicio de autenticación (Node + Postgres)
+  # Auth-service (Spring Boot + Postgres)
   # ---------------------------------------------------------------
   - type: web
     name: cp-auth-service
@@ -41,34 +33,22 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      - key: NODE_ENV
-        value: production
       - key: PORT
         value: 4001
       - key: DB_HOST
-        fromDatabase:
-          name: cp-postgres
-          property: host
+        fromDatabase: { name: cp-postgres, property: host }
       - key: DB_PORT
-        fromDatabase:
-          name: cp-postgres
-          property: port
+        fromDatabase: { name: cp-postgres, property: port }
       - key: DB_NAME
-        fromDatabase:
-          name: cp-postgres
-          property: database
+        fromDatabase: { name: cp-postgres, property: database }
       - key: DB_USER
-        fromDatabase:
-          name: cp-postgres
-          property: user
+        fromDatabase: { name: cp-postgres, property: user }
       - key: DB_PASSWORD
-        fromDatabase:
-          name: cp-postgres
-          property: password
+        fromDatabase: { name: cp-postgres, property: password }
       - key: JWT_SECRET
         generateValue: true
-      - key: JWT_EXPIRES_IN
-        value: 24h
+      - key: JWT_EXPIRATION_MS
+        value: 86400000
       - key: ADMIN_NAME
         value: Administrador
       - key: ADMIN_EMAIL
@@ -77,7 +57,7 @@ services:
         value: Admin123!
 
   # ---------------------------------------------------------------
-  # Microservicio del parqueadero (Node + MySQL externo)
+  # Parqueadero-service (Spring Boot + MySQL externo)
   # ---------------------------------------------------------------
   - type: web
     name: cp-parqueadero-service
@@ -89,25 +69,20 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      - key: NODE_ENV
-        value: production
       - key: PORT
         value: 4002
-
-      # === Datos del MySQL externo (Railway / Aiven / Clever Cloud) ===
-      # Después de "Apply" en Render, te pedirá estos valores.
+      # Datos del MySQL externo (Railway / Aiven / Clever Cloud)
       - key: DB_HOST
-        sync: false        # ej: containers-us-west-X.railway.app
+        sync: false
       - key: DB_PORT
-        sync: false        # ej: 3306
+        sync: false
       - key: DB_NAME
-        sync: false        # ej: parqueadero_db
+        sync: false
       - key: DB_USER
-        sync: false        # ej: root
+        sync: false
       - key: DB_PASSWORD
-        sync: false        # contraseña del MySQL externo
-
-      # Debe ser EXACTAMENTE el mismo JWT_SECRET de cp-auth-service.
+        sync: false
+      # Mismo JWT_SECRET que auth-service
       - key: JWT_SECRET
         fromService:
           name: cp-auth-service
@@ -115,7 +90,7 @@ services:
           envVarKey: JWT_SECRET
 
   # ---------------------------------------------------------------
-  # Frontend (React + Vite + nginx, configurado en runtime)
+  # Frontend (Spring Boot + Thymeleaf)
   # ---------------------------------------------------------------
   - type: web
     name: cp-frontend
@@ -124,12 +99,13 @@ services:
     region: oregon
     rootDir: frontend
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
     autoDeploy: true
     envVars:
-      # NOTA: Render no expone una propiedad para la URL pública completa,
-      # así que las definimos explícitamente. Si los servicios tienen sufijos
-      # (ej: cp-auth-service-XXXX), edítalas en el dashboard de Render.
+      - key: PORT
+        value: 8080
+      # Después de "Apply", pega las URLs públicas de los backends.
       - key: AUTH_API_URL
-        sync: false   # → pega aquí la URL pública del cp-auth-service
+        sync: false
       - key: PARQUEADERO_API_URL
-        sync: false   # → pega aquí la URL pública del cp-parqueadero-service
+        sync: false

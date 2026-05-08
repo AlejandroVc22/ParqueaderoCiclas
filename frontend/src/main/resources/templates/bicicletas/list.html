@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Bicicletas | Ciclo-Parqueadero')}"></head>
+<body>
+
+<div class="app-shell">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: navbar}"></header>
+
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <div class="page">
+                <div class="page-header">
+                    <div>
+                        <h1>Bicicletas</h1>
+                        <p class="muted">Administra el ingreso, salida y estado de cada bicicleta.</p>
+                    </div>
+                    <div class="page-actions">
+                        <a th:if="${currentUser != null and currentUser.admin}"
+                           th:href="@{/bicicletas/nueva}"
+                           class="btn btn-primary">＋ Nueva bicicleta</a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <form class="filters-bar" method="get" th:action="@{/bicicletas}">
+                        <div class="search-input">
+                            <span class="icon">🔍</span>
+                            <input type="text" name="search" th:value="${search}"
+                                   placeholder="Buscar por propietario, documento, tipo o color..." />
+                        </div>
+                        <select name="estado">
+                            <option value="" th:selected="${estado == null or estado == ''}">Todos los estados</option>
+                            <option value="PARQUEADA" th:selected="${estado == 'PARQUEADA'}">Parqueada</option>
+                            <option value="RETIRADA" th:selected="${estado == 'RETIRADA'}">Retirada</option>
+                        </select>
+                        <button class="btn btn-secondary" type="submit">Filtrar</button>
+                    </form>
+
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Propietario</th>
+                                <th>Tipo</th>
+                                <th>Color</th>
+                                <th>Ingreso</th>
+                                <th>Salida</th>
+                                <th>Estado</th>
+                                <th class="text-right">Acciones</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${#lists.isEmpty(bicicletas)}">
+                                <td colspan="8" class="empty-row">Sin resultados.</td>
+                            </tr>
+                            <tr th:each="b : ${bicicletas}">
+                                <td th:text="${b.id}">1</td>
+                                <td>
+                                    <div class="cell-strong" th:text="${b.propietario}">Nombre</div>
+                                    <div class="cell-muted" th:text="${b.documento}">Doc</div>
+                                </td>
+                                <td th:text="${b.tipoBicicleta}">Tipo</td>
+                                <td th:text="${b.color}">Color</td>
+                                <td th:text="${b.horaIngreso != null ? #temporals.format(b.horaIngreso,'dd/MM/yyyy HH:mm') : '—'}">—</td>
+                                <td th:text="${b.horaSalida != null ? #temporals.format(b.horaSalida,'dd/MM/yyyy HH:mm') : '—'}">—</td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${b.estado == 'PARQUEADA'} ? ' badge-success' : ' badge-warning'"
+                                          th:text="${b.estado}">PARQUEADA</span>
+                                </td>
+                                <td class="text-right">
+                                    <th:block th:if="${currentUser != null and currentUser.admin}">
+                                        <a th:href="@{|/bicicletas/${b.id}/editar|}" class="icon-btn" title="Editar">✎</a>
+                                        <form th:action="@{|/bicicletas/${b.id}/eliminar|}" method="post"
+                                              style="display:inline"
+                                              onsubmit="return confirm('¿Eliminar esta bicicleta?');">
+                                            <button type="submit" class="icon-btn danger" title="Eliminar">🗑</button>
+                                        </form>
+                                    </th:block>
+                                    <span th:unless="${currentUser != null and currentUser.admin}" class="muted">—</span>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+</body>
+</html>

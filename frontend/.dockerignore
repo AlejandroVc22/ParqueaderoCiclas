@@ -1,10 +1,10 @@
-node_modules
-dist
-npm-debug.log
-.env
-.env.local
+target/
+.idea/
+.vscode/
+*.iml
 .git
 .gitignore
+.env
 *.md
 Dockerfile
 .dockerignore

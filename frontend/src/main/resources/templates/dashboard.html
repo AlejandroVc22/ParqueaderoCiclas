@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Dashboard | Ciclo-Parqueadero')}"></head>
+<body>
+
+<div class="app-shell">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: navbar}"></header>
+
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <div class="page">
+                <div class="page-header">
+                    <div>
+                        <h1>Dashboard</h1>
+                        <p class="muted">Resumen general del ciclo-parqueadero</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card stat-cyan">
+                        <div class="stat-icon">🚲</div>
+                        <div class="stat-content">
+                            <p class="stat-title">Total Bicicletas</p>
+                            <h3 class="stat-value" th:text="${stats.total}">0</h3>
+                            <p class="stat-subtitle">Registradas en el sistema</p>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-green">
+                        <div class="stat-icon">✓</div>
+                        <div class="stat-content">
+                            <p class="stat-title">Parqueadas</p>
+                            <h3 class="stat-value" th:text="${stats.parqueadas}">0</h3>
+                            <p class="stat-subtitle">Actualmente en el parqueadero</p>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-orange">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-content">
+                            <p class="stat-title">Retiradas</p>
+                            <h3 class="stat-value" th:text="${stats.retiradas}">0</h3>
+                            <p class="stat-subtitle">Ya salieron del parqueadero</p>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-purple">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-content">
+                            <p class="stat-title">Usuarios</p>
+                            <h3 class="stat-value" th:text="${stats.usuarios}">0</h3>
+                            <p class="stat-subtitle">Cuentas registradas</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h3>Bicicletas recientes</h3>
+                            <p class="muted">Últimos ingresos al ciclo-parqueadero</p>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                            <tr>
+                                <th>Propietario</th>
+                                <th>Tipo</th>
+                                <th>Color</th>
+                                <th>Ingreso</th>
+                                <th>Estado</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${#lists.isEmpty(recientes)}">
+                                <td colspan="5" class="empty-row">
+                                    Aún no hay bicicletas registradas.
+                                </td>
+                            </tr>
+                            <tr th:each="b : ${recientes}">
+                                <td>
+                                    <div class="cell-strong" th:text="${b.propietario}">Nombre</div>
+                                    <div class="cell-muted" th:text="${b.documento}">Doc</div>
+                                </td>
+                                <td th:text="${b.tipoBicicleta}">Montaña</td>
+                                <td th:text="${b.color}">Rojo</td>
+                                <td th:text="${b.horaIngreso != null ? #temporals.format(b.horaIngreso,'dd/MM/yyyy HH:mm') : '—'}">—</td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${b.estado == 'PARQUEADA'} ? ' badge-success' : ' badge-warning'"
+                                          th:text="${b.estado}">PARQUEADA</span>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+</body>
+</html>

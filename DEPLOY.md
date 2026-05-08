@@ -1,226 +1,110 @@
-# 🚀 Guía de despliegue en Render
+# 🚀 Guía de despliegue en Render (Spring Boot)
 
-Este documento te guía **paso a paso** para desplegar **Ciclo-Parqueadero** completo en producción usando:
+Esta guía despliega **Ciclo-Parqueadero** completo:
 
-- **Render** → PostgreSQL + 3 servicios web (auth, parqueadero, frontend).
-- **Railway** (o Aiven / Clever Cloud) → MySQL gratuito.
-
-> ⚠️ **Por qué un MySQL externo:** Render solo ofrece PostgreSQL. Como tu examen exige MySQL + PostgreSQL, mantenemos MySQL en otro proveedor que sí lo ofrece gratis.
+- **Render** → PostgreSQL + 3 servicios web Spring Boot (auth, parqueadero, frontend Thymeleaf).
+- **Railway** (o Aiven / Clever Cloud) → MySQL gratuito (Render no lo ofrece).
 
 ---
 
-## 📋 Resumen de lo que vas a desplegar
-
-| Servicio                | Plataforma | Plan         | Tipo            |
-|-------------------------|------------|--------------|-----------------|
-| `cp-postgres`           | Render     | Free         | PostgreSQL DB   |
-| `cp-mysql`              | Railway    | Free         | MySQL DB        |
-| `cp-auth-service`       | Render     | Free         | Web (Docker)    |
-| `cp-parqueadero-service`| Render     | Free         | Web (Docker)    |
-| `cp-frontend`           | Render     | Free         | Web (Docker)    |
-
----
-
-## ✅ Paso 0 — Subir el proyecto a GitHub
-
-Render despliega desde un repo Git, así que primero necesitas el código en GitHub.
+## ✅ Paso 0 — Repositorio en GitHub
 
 ```bash
-cd Parqueadero
-git init
 git add .
-git commit -m "Ciclo-Parqueadero: deploy initial"
-git branch -M main
-```
-
-Crea un repo nuevo en https://github.com/new (vacío, sin README) y sube tu código:
-
-```bash
-git remote add origin https://github.com/TU_USUARIO/ciclo-parqueadero.git
-git push -u origin main
+git commit -m "Migración a Spring Boot"
+git push origin main
 ```
 
 ---
 
 ## ✅ Paso 1 — Aprovisionar MySQL en Railway (3 min)
 
-1. Entra a **https://railway.com/** y entra con GitHub.
-2. Click en **"New Project"** → **"Provision MySQL"**.
-3. Espera ~30 s a que arranque.
-4. Click en el servicio MySQL → pestaña **"Variables"**. Verás:
+1. https://railway.com/ → login con GitHub.
+2. **New Project** → **Provision MySQL**.
+3. Click sobre el servicio MySQL → pestaña **"Settings"** → **"Networking"** → **"Generate Domain"** (Public Networking).
+4. Pestaña **"Variables"**: copia los valores de:
 
-   ```
-   MYSQL_DATABASE     = railway
-   MYSQL_HOST         = containers-us-west-XXX.railway.app
-   MYSQL_PORT         = 7XXX
-   MYSQL_ROOT_PASSWORD = XXXXXXXXXXXX
-   MYSQL_USER         = root
-   ```
+| Variable Railway | Para usar como |
+|---|---|
+| `RAILWAY_TCP_PROXY_DOMAIN` | `DB_HOST` (público) |
+| `RAILWAY_TCP_PROXY_PORT`  | `DB_PORT` (público) |
+| `MYSQL_DATABASE`          | `DB_NAME` |
+| `MYSQL_USER` (suele ser `root`) | `DB_USER` |
+| `MYSQL_ROOT_PASSWORD`     | `DB_PASSWORD` |
 
-5. **Apunta esos 5 valores**, los necesitarás en el siguiente paso.
-6. Opcional pero recomendado: cambia el nombre de la base a `parqueadero_db` ejecutando esto desde la pestaña **"Data"**:
-
-   ```sql
-   CREATE DATABASE IF NOT EXISTS parqueadero_db;
-   ```
-
-   Si no, deja `MYSQL_DATABASE=railway` y luego úsalo en `DB_NAME`.
-
-> 💡 **Alternativas a Railway:**
-> - [Aiven](https://aiven.io) → 1 mes free trial (requiere tarjeta).
-> - [Clever Cloud](https://clever-cloud.com) → plan DEV gratis 10 MB sin tarjeta.
+> ⚠️ **No uses `mysql.railway.internal`**, ese es el host privado y solo funciona dentro de Railway. Necesitas el dominio público que aparece tras activar Public Networking.
 
 ---
 
-## ✅ Paso 2 — Desplegar todo en Render con un solo click
+## ✅ Paso 2 — Render Blueprint
 
-### Opción A: usando el Blueprint (recomendado)
+1. https://dashboard.render.com/ → login con GitHub.
+2. **New +** → **Blueprint**.
+3. Selecciona tu repo `ParqueaderoCiclas`.
+4. Render leerá `render.yaml` automáticamente.
+5. Pegará los campos `sync: false`:
 
-1. Entra a **https://dashboard.render.com/** y entra con GitHub.
-2. Click **"New +"** → **"Blueprint"**.
-3. Elige el repo `ciclo-parqueadero`.
-4. Render detectará automáticamente el archivo `render.yaml`.
-5. Click **"Apply"**.
+| Servicio | Variable | Valor |
+|---|---|---|
+| `cp-parqueadero-service` | `DB_HOST` | el `RAILWAY_TCP_PROXY_DOMAIN` (ej: `mainline.proxy.rlwy.net`) |
+| `cp-parqueadero-service` | `DB_PORT` | el `RAILWAY_TCP_PROXY_PORT` (ej: `47473`) |
+| `cp-parqueadero-service` | `DB_NAME` | `railway` (o el `MYSQL_DATABASE`) |
+| `cp-parqueadero-service` | `DB_USER` | `root` |
+| `cp-parqueadero-service` | `DB_PASSWORD` | el `MYSQL_ROOT_PASSWORD` |
+| `cp-frontend` | `AUTH_API_URL` | `https://cp-auth-service.onrender.com` (lo verás tras crearse) |
+| `cp-frontend` | `PARQUEADERO_API_URL` | `https://cp-parqueadero-service.onrender.com` |
 
-Render te pedirá rellenar las variables marcadas como `sync: false` (los datos del MySQL externo). Pégalos en este orden:
+> 💡 **Tip**: las URLs del frontend pueden quedar pendientes; si no las sabes aún, pon valores temporales y al terminar el deploy, edítalas en `cp-frontend` → **Environment** con las URLs públicas reales.
 
-| Variable                       | Valor                                          |
-|--------------------------------|------------------------------------------------|
-| `cp-parqueadero-service.DB_HOST`     | `MYSQL_HOST` de Railway (ej: `containers-us-west-XXX.railway.app`) |
-| `cp-parqueadero-service.DB_PORT`     | `MYSQL_PORT` de Railway (ej: `7XXX`)           |
-| `cp-parqueadero-service.DB_NAME`     | `parqueadero_db` o el `MYSQL_DATABASE` de Railway |
-| `cp-parqueadero-service.DB_USER`     | `root`                                         |
-| `cp-parqueadero-service.DB_PASSWORD` | `MYSQL_ROOT_PASSWORD` de Railway               |
+6. Click en **"Apply"** o **"Deploy Blueprint"**.
 
-Click **"Apply"** y Render comenzará a construir todo. **Tarda entre 5 y 12 minutos** la primera vez.
-
-### Opción B: manual (servicio por servicio)
-
-Si prefieres no usar el Blueprint, crea cada uno desde el dashboard:
-
-#### B.1 PostgreSQL
-- **New +** → **PostgreSQL** → Name: `cp-postgres`, Plan: `Free` → Create.
-- Copia los **valores internos** (Internal Database URL).
-
-#### B.2 auth-service
-- **New +** → **Web Service** → conecta el repo.
-- Configura:
-  - **Name:** `cp-auth-service`
-  - **Root Directory:** `auth-service`
-  - **Runtime:** `Docker`
-  - **Plan:** Free
-- En **Environment** añade:
-
-  ```
-  NODE_ENV=production
-  PORT=4001
-  DB_HOST=<host interno de cp-postgres>
-  DB_PORT=5432
-  DB_NAME=<database de cp-postgres>
-  DB_USER=<user de cp-postgres>
-  DB_PASSWORD=<password de cp-postgres>
-  JWT_SECRET=<una cadena larga aleatoria, mínimo 32 chars>
-  JWT_EXPIRES_IN=24h
-  ADMIN_NAME=Administrador
-  ADMIN_EMAIL=admin@cicloparqueadero.com
-  ADMIN_PASSWORD=Admin123!
-  ```
-- **Health Check Path:** `/health`
-- Crea el servicio. Al terminar, **copia su URL pública** (ej: `https://cp-auth-service.onrender.com`).
-
-#### B.3 parqueadero-service
-- **New +** → **Web Service** → mismo repo.
-- Configura:
-  - **Name:** `cp-parqueadero-service`
-  - **Root Directory:** `parqueadero-service`
-  - **Runtime:** `Docker`
-  - **Plan:** Free
-- En **Environment**:
-
-  ```
-  NODE_ENV=production
-  PORT=4002
-  DB_HOST=<MYSQL_HOST de Railway>
-  DB_PORT=<MYSQL_PORT de Railway>
-  DB_NAME=parqueadero_db
-  DB_USER=root
-  DB_PASSWORD=<MYSQL_ROOT_PASSWORD de Railway>
-  JWT_SECRET=<EXACTAMENTE el mismo de cp-auth-service>
-  ```
-- **Health Check Path:** `/health`
-- Crea el servicio y **copia su URL pública**.
-
-#### B.4 frontend
-- **New +** → **Web Service** → mismo repo.
-- Configura:
-  - **Name:** `cp-frontend`
-  - **Root Directory:** `frontend`
-  - **Runtime:** `Docker`
-  - **Plan:** Free
-- En **Environment**:
-
-  ```
-  AUTH_API_URL=https://cp-auth-service.onrender.com
-  PARQUEADERO_API_URL=https://cp-parqueadero-service.onrender.com
-  ```
-- Crea el servicio.
+⏳ **Tarda 8-15 minutos** (Maven compila los 3 proyectos Spring Boot).
 
 ---
 
-## ✅ Paso 3 — Verificar que todo funciona
+## ✅ Paso 3 — Verificar
 
-Cuando Render termine el deploy, abre cada URL y prueba:
+Cuando los 4 recursos estén "Live":
 
 ```bash
-# 1. Salud del auth
+# Salud de cada servicio
 curl https://cp-auth-service.onrender.com/health
-
-# 2. Salud del parqueadero
 curl https://cp-parqueadero-service.onrender.com/health
+curl https://cp-frontend.onrender.com/health
 
-# 3. Login del admin
+# Login
 curl -X POST https://cp-auth-service.onrender.com/auth/login \
   -H "Content-Type: application/json" \
   -d '{"correo":"admin@cicloparqueadero.com","password":"Admin123!"}'
 ```
 
-Luego abre la app en tu navegador:
+Abre la app en el navegador:
 
 ```
 https://cp-frontend.onrender.com
 ```
 
-Inicia sesión con:
-- **Correo:** `admin@cicloparqueadero.com`
-- **Contraseña:** `Admin123!`
+Login con `admin@cicloparqueadero.com / Admin123!`.
 
----
-
-## 🛡️ Recomendaciones de producción
-
-1. **Cambia `ADMIN_PASSWORD`** después del primer login.
-2. **Genera un `JWT_SECRET` fuerte** (mínimo 64 caracteres aleatorios). Si usaste el Blueprint, Render ya generó uno.
-3. Render **duerme** los servicios free después de 15 min sin tráfico → la primera petición tras un periodo inactivo tarda ~30 s en responder. Es normal.
-4. Para evitar la suspensión: actualiza al plan **Starter** ($7/mes por servicio) o configura un cron/ping cada 10 min usando https://uptimerobot.com.
+> ⚠️ La 1ª petición tras inactividad tarda **40-60 seg** porque Render despierta los servicios free.
 
 ---
 
 ## 🛟 Solución de problemas
 
-| Problema | Causa probable | Solución |
-|----------|----------------|----------|
-| Frontend muestra `Network Error` o 401 | Las URLs `AUTH_API_URL` / `PARQUEADERO_API_URL` no apuntan a las URLs públicas correctas | Revisa las env vars del frontend en Render → Settings → Environment. Render redeploya solo. |
-| `Token inválido` al iniciar sesión | `JWT_SECRET` distinto entre auth-service y parqueadero-service | En Render, copia el JWT_SECRET de `cp-auth-service` y pégalo idéntico en `cp-parqueadero-service` |
-| `parqueadero-service` no conecta a MySQL | Datos de Railway incorrectos | Verifica `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` desde la pestaña Variables de Railway |
-| `auth-service` no arranca | Postgres aún no estaba listo | Reinicia el servicio (botón "Manual Deploy" → "Clear cache & deploy") |
-| Cambié `AUTH_API_URL` y el frontend sigue usando la vieja | Caché del navegador | `Ctrl + F5` o abrir en ventana de incógnito. El archivo `env.js` tiene `Cache-Control: no-store`. |
-| CORS bloqueado | Algún navegador estricto | Ambos backends ya permiten `*`. Si lo restringiste, ajusta `cors({ origin: 'https://cp-frontend.onrender.com' })` |
+| Síntoma | Solución |
+|---|---|
+| `parqueadero-service` con `ENOTFOUND ...railway.internal` | Estás usando la URL **privada**. Activa Public Networking en Railway y usa `RAILWAY_TCP_PROXY_DOMAIN` + `RAILWAY_TCP_PROXY_PORT`. |
+| `Token inválido` al consultar bicicletas | El `JWT_SECRET` debe ser **idéntico** entre `cp-auth-service` y `cp-parqueadero-service`. |
+| Frontend no se conecta a backends | Edita `AUTH_API_URL` y `PARQUEADERO_API_URL` en `cp-frontend` → Environment con las URLs reales (`https://cp-auth-service.onrender.com`). |
+| `cp-frontend` se "suspende" | Plan free de Render limita 1-2 web services activos. Reduce o sube de plan. |
+| El servicio queda "suspended by its owner" | Click en él → **"Resume Service"** o haz un **Manual Sync** del Blueprint. |
 
 ---
 
-## 🔄 Actualizaciones posteriores
+## 🔄 Actualizaciones
 
-Cualquier cambio que hagas en `main` se desplegará automáticamente porque `autoDeploy: true` está activo.
+Push a `main` redespliega automáticamente (porque `autoDeploy: true` está activo).
 
 ```bash
 git add .
@@ -228,20 +112,12 @@ git commit -m "feat: nueva mejora"
 git push
 ```
 
-Render detecta el push y reconstruye los servicios afectados.
-
 ---
 
 ## 📍 URLs típicas finales
 
 ```
-Frontend         → https://cp-frontend.onrender.com
-Auth API         → https://cp-auth-service.onrender.com
-Parqueadero API  → https://cp-parqueadero-service.onrender.com
-PostgreSQL       → (interno, accesible solo desde otros servicios de Render)
-MySQL            → containers-us-west-XXX.railway.app:7XXX (Railway)
+https://cp-frontend.onrender.com
+https://cp-auth-service.onrender.com
+https://cp-parqueadero-service.onrender.com
 ```
-
----
-
-> ¡Listo! Tu sistema está en producción y accesible desde cualquier parte del mundo. 🌐

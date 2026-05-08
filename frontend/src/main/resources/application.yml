@@ -1,0 +1,22 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: frontend
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+
+app:
+  api:
+    auth-url: ${AUTH_API_URL:http://localhost:4001}
+    parqueadero-url: ${PARQUEADERO_API_URL:http://localhost:4002}
+
+logging:
+  level:
+    root: INFO
+    com.cicloparqueadero: DEBUG

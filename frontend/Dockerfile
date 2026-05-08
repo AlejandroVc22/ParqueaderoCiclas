@@ -1,31 +1,21 @@
-# Etapa 1: build de la aplicación
-FROM node:20-alpine AS build
+FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+COPY pom.xml ./
+RUN mvn -B -q -DskipTests dependency:go-offline
 
-COPY . .
-RUN npm run build
+COPY src ./src
+RUN mvn -B -q -DskipTests package
 
-# Etapa 2: servidor estático con nginx
-FROM nginx:1.27-alpine
+FROM eclipse-temurin:17-jre-alpine
 
-# Render expone el puerto vía $PORT; nginx escuchará ahí.
-ENV PORT=80
+WORKDIR /app
 
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf.template /etc/nginx/templates/default.conf.template
-COPY docker-entrypoint.sh /docker-entrypoint.d/40-runtime-env.sh
+COPY --from=build /app/target/frontend.jar app.jar
 
-# Normaliza CRLF → LF (por si el archivo se editó en Windows) y da permisos.
-RUN sed -i 's/\r$//' /docker-entrypoint.d/40-runtime-env.sh \
-    && sed -i 's/\r$//' /etc/nginx/templates/default.conf.template \
-    && chmod +x /docker-entrypoint.d/40-runtime-env.sh
+ENV JAVA_OPTS="-Xms128m -Xmx512m"
+ENV PORT=8080
+EXPOSE 8080
 
-EXPOSE 80
-
-# La imagen de nginx ya provee un entrypoint que ejecuta los scripts en
-# /docker-entrypoint.d/ y procesa las plantillas en /etc/nginx/templates/.
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Bicicleta | Ciclo-Parqueadero')}"></head>
+<body>
+
+<div class="app-shell">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: navbar}"></header>
+
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <div class="page">
+                <div class="page-header">
+                    <div>
+                        <h1 th:text="${editing} ? 'Editar bicicleta' : 'Registrar bicicleta'">Bicicleta</h1>
+                        <p class="muted">Diligencia los datos del propietario y la bicicleta.</p>
+                    </div>
+                    <div class="page-actions">
+                        <a th:href="@{/bicicletas}" class="btn btn-ghost">← Volver</a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <form class="form-grid card-padded"
+                          th:action="${editing} ? @{|/bicicletas/${bicicleta.id}/editar|} : @{/bicicletas/nueva}"
+                          method="post">
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Propietario</label>
+                                <input type="text" name="propietario" th:value="${bicicleta.propietario}"
+                                       placeholder="Nombre completo" required />
+                            </div>
+                            <div class="form-field">
+                                <label>Documento</label>
+                                <input type="text" name="documento" th:value="${bicicleta.documento}"
+                                       placeholder="CC, TI, CE..." required />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Tipo de bicicleta</label>
+                                <select name="tipo_bicicleta" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option th:each="t : ${ {'Urbana','Montaña','BMX','Ruta','Eléctrica','Plegable','Otra'} }"
+                                            th:value="${t}" th:text="${t}"
+                                            th:selected="${bicicleta.tipoBicicleta == t}">Tipo</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label>Color</label>
+                                <input type="text" name="color" th:value="${bicicleta.color}"
+                                       placeholder="Ej: Rojo, Negro mate..." required />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Estado</label>
+                                <select name="estado">
+                                    <option value="PARQUEADA" th:selected="${bicicleta.estado == 'PARQUEADA' or bicicleta.estado == null}">PARQUEADA</option>
+                                    <option value="RETIRADA" th:selected="${bicicleta.estado == 'RETIRADA'}">RETIRADA</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-field">
+                            <label>Observaciones</label>
+                            <textarea name="observaciones" rows="3"
+                                      placeholder="Detalles adicionales (opcional)"
+                                      th:text="${bicicleta.observaciones}"></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <a th:href="@{/bicicletas}" class="btn btn-ghost">Cancelar</a>
+                            <button type="submit" class="btn btn-primary"
+                                    th:text="${editing} ? 'Actualizar' : 'Registrar'">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,6 +1,6 @@
-# 🚲 Ciclo-Parqueadero
+# 🚲 Ciclo-Parqueadero (Spring Boot)
 
-> **Sistema Full-Stack dockerizado de gestión de ciclo-parqueadero** con arquitectura de **microservicios**, autenticación **JWT**, roles **ADMIN / USER**, **PostgreSQL + MySQL**, y un panel web moderno estilo dashboard SaaS oscuro.
+> **Sistema Full-Stack dockerizado de gestión de ciclo-parqueadero** con arquitectura de **microservicios en Spring Boot 3**, autenticación **JWT**, roles **ADMIN / USER**, **PostgreSQL + MySQL**, y un frontend **Spring Boot + Thymeleaf** estilo dashboard SaaS oscuro.
 
 ---
 
@@ -12,98 +12,95 @@
 4. [Estructura del proyecto](#-estructura-del-proyecto)
 5. [Requisitos previos](#-requisitos-previos)
 6. [Instalación y ejecución con Docker](#-instalación-y-ejecución-con-docker-recomendado)
-7. [Ejecución manual (sin Docker)](#-ejecución-manual-sin-docker)
+7. [Ejecución manual sin Docker](#-ejecución-manual-sin-docker)
 8. [Credenciales por defecto](#-credenciales-por-defecto)
 9. [Endpoints del API](#-endpoints-del-api)
 10. [Pruebas](#-pruebas)
 11. [Variables de entorno](#-variables-de-entorno)
-12. [Despliegue en la nube](#-despliegue-en-la-nube-render--railway)
-13. [Solución de problemas](#-solución-de-problemas)
+12. [Despliegue en Render](#-despliegue-en-render)
 
 ---
 
 ## ✨ Características
 
-- ✅ **Arquitectura en capas**: Controllers, Services, Repositories, Models, DTOs, Routes y Middleware.
+- ✅ **Arquitectura en capas Spring**: `controller → service → repository → entity → dto`.
 - ✅ **2 microservicios independientes** comunicados por JWT compartido:
-  - `auth-service` → PostgreSQL → registro, login, perfil, roles, gestión de usuarios.
-  - `parqueadero-service` → MySQL → CRUD completo de bicicletas con estados.
-- ✅ **JWT** firmado con `jsonwebtoken` y contraseñas con `bcryptjs`.
-- ✅ **Roles**: `ADMIN` (control total: crear, editar y eliminar) y `USER` (solo consulta de bicicletas).
-- ✅ **Frontend React + Vite** con dashboard SaaS oscuro, responsive y animaciones.
-- ✅ **Dockerfile por servicio** + `docker-compose.yml` que levanta todo con un solo comando.
-- ✅ **Validaciones** con `express-validator`, manejo global de errores y CORS.
+  - `auth-service` → PostgreSQL → Spring Security + JJWT + Spring Data JPA.
+  - `parqueadero-service` → MySQL → JJWT + Spring Data JPA.
+- ✅ **JWT** firmado con HS256 (`io.jsonwebtoken:jjwt`) y contraseñas con `BCryptPasswordEncoder`.
+- ✅ **Roles**: `ADMIN` (control total) y `USER` (solo consulta).
+- ✅ **Frontend Spring Boot + Thymeleaf** con dashboard SaaS oscuro responsivo (sidebar, navbar, cards, tablas, modales).
+- ✅ **Dockerfile multi-stage** por servicio (build con Maven → runtime JRE Alpine).
+- ✅ **docker-compose.yml** que levanta toda la pila (5 contenedores) con un comando.
+- ✅ **Validaciones** con `jakarta.validation`, manejo global de errores (`@RestControllerAdvice`) y CORS.
 - ✅ **Admin sembrado automáticamente** al levantar el servicio Auth.
-- ✅ **Listo para producción** y para desplegar en Render / Railway.
+- ✅ **Listo para producción** y para desplegar en Render con el `render.yaml` incluido.
 
 ---
 
 ## 🛠️ Tecnologías
 
 ### Backend
-- Node.js 20 + Express
-- Sequelize ORM
-- JWT (`jsonwebtoken`)
-- bcryptjs
-- `express-validator` · `helmet` · `cors` · `morgan`
-- PostgreSQL 16 (Auth)
-- MySQL 8 (Parqueadero)
+- **Java 17 + Maven**
+- **Spring Boot 3.3.4**: Web, Data JPA, Security, Validation, Actuator, WebFlux (en frontend)
+- **Spring Security** + `BCryptPasswordEncoder`
+- **JJWT 0.12.6** para firma y verificación de tokens
+- **Hibernate / JPA**
+- **PostgreSQL 16** (Auth)
+- **MySQL 8** (Parqueadero)
+- **Lombok** para reducir boilerplate
 
 ### Frontend
-- React 18 + Vite 5
-- React Router DOM 6
-- Axios
-- Context API
-- React Icons + React Hot Toast
-- CSS personalizado (dashboard oscuro)
+- **Spring Boot 3 + Thymeleaf** (server-side rendering)
+- **WebClient** para consumir las APIs REST
+- **CSS personalizado** (dashboard oscuro estilo SaaS)
+- **HttpSession** para mantener el JWT del usuario logueado
 
 ### Infraestructura
-- Docker + Docker Compose
-- Nginx (sirve el frontend en producción)
+- **Docker** + **docker-compose**
+- **Maven** multi-stage builds
+- **Eclipse Temurin 17 JRE Alpine** como runtime ligero
 
 ---
 
 ## 🏗️ Arquitectura
 
 ```
-                         ┌────────────────────┐
-                         │      Browser       │
-                         └─────────┬──────────┘
-                                   │ HTTP
-                         ┌─────────▼──────────┐
-                         │  Frontend (Nginx)  │  :5173
-                         │  React + Vite      │
-                         └─────┬────────┬─────┘
-                               │        │
-                  Axios JWT    │        │   Axios JWT
-                               │        │
-                ┌──────────────▼──┐  ┌──▼─────────────────┐
-                │  auth-service   │  │ parqueadero-service │
-                │   :4001         │  │   :4002             │
-                │ (Node/Express)  │  │ (Node/Express)      │
-                └────────┬────────┘  └────────┬────────────┘
-                         │ Sequelize          │ Sequelize
-                ┌────────▼────────┐  ┌────────▼────────┐
-                │   PostgreSQL    │  │     MySQL       │
-                │     :5432       │  │     :3306       │
-                └─────────────────┘  └─────────────────┘
+                   ┌──────────────────────────┐
+                   │   Browser del usuario    │
+                   └──────────────┬───────────┘
+                                  │ HTTP
+                   ┌──────────────▼──────────────┐
+                   │  cp-frontend  (Spring Boot) │
+                   │      Thymeleaf  :8080       │
+                   └──────┬─────────────┬────────┘
+              WebClient   │             │  WebClient
+              + JWT       │             │  + JWT
+            ┌─────────────▼┐         ┌──▼─────────────────┐
+            │ cp-auth-svc  │         │ cp-parqueadero-svc │
+            │ Spring Boot  │         │ Spring Boot        │
+            │   :4001      │         │   :4002            │
+            └──────┬───────┘         └──────┬─────────────┘
+                   │ JPA                    │ JPA
+            ┌──────▼─────┐            ┌─────▼──────┐
+            │ PostgreSQL │            │   MySQL    │
+            │   :5432    │            │   :3306    │
+            └────────────┘            └────────────┘
 ```
 
-Cada microservicio respeta **arquitectura en capas**:
+Cada microservicio respeta **arquitectura en capas estándar de Spring**:
 
 ```
-src/
-├── config/         # Conexión a DB
-├── models/         # Modelos Sequelize
-├── repositories/   # Acceso a datos
-├── services/       # Lógica de negocio
-├── controllers/    # Entrada/salida HTTP
-├── dtos/           # Data Transfer Objects
-├── routes/         # Definición de endpoints
-├── middleware/     # auth, validación, errores
-├── utils/          # JWT, bcrypt, helpers
-├── app.js          # Configuración de Express
-└── server.js       # Bootstrap del servidor
+src/main/java/com/cicloparqueadero/<servicio>/
+├── controller/        # @RestController (REST endpoints)
+├── service/           # @Service (lógica de negocio)
+├── repository/        # @Repository (Spring Data JPA)
+├── entity/            # @Entity (modelos JPA)
+├── dto/               # Data Transfer Objects
+├── config/            # @Configuration (Security, CORS, Beans)
+├── security/          # JwtUtil, JwtAuthFilter, AuthenticatedUser
+├── exception/         # GlobalExceptionHandler + excepciones custom
+└── <Servicio>Application.java
 ```
 
 ---
@@ -112,60 +109,58 @@ src/
 
 ```
 Parqueadero/
-├── auth-service/                # Microservicio de autenticación (PostgreSQL)
-│   ├── src/
-│   │   ├── config/database.js
-│   │   ├── controllers/auth.controller.js
-│   │   ├── dtos/user.dto.js
-│   │   ├── middleware/
-│   │   │   ├── auth.middleware.js
-│   │   │   ├── error.middleware.js
-│   │   │   └── validation.middleware.js
-│   │   ├── models/user.model.js
-│   │   ├── repositories/user.repository.js
-│   │   ├── routes/auth.routes.js
-│   │   ├── seed/admin.seed.js
-│   │   ├── services/auth.service.js
-│   │   ├── utils/{jwt.util.js,password.util.js}
-│   │   ├── app.js
-│   │   └── server.js
+├── auth-service/                   ← Microservicio Auth (Spring Boot + Postgres)
+│   ├── src/main/java/com/cicloparqueadero/auth/
+│   │   ├── controller/  AuthController, HealthController
+│   │   ├── service/     AuthService
+│   │   ├── repository/  UserRepository
+│   │   ├── entity/      User
+│   │   ├── dto/         RegisterRequest, LoginRequest, AuthResponse, UserDTO, ApiResponse
+│   │   ├── security/    JwtUtil, JwtAuthFilter, AuthenticatedUser
+│   │   ├── config/      SecurityConfig, AdminSeeder
+│   │   ├── exception/   GlobalExceptionHandler + custom exceptions
+│   │   └── AuthServiceApplication.java
+│   ├── src/main/resources/application.yml
+│   ├── pom.xml
 │   ├── Dockerfile
-│   ├── .env.example
-│   └── package.json
+│   └── .env.example
 │
-├── parqueadero-service/         # Microservicio del parqueadero (MySQL)
-│   ├── src/
-│   │   ├── config/database.js
-│   │   ├── controllers/bicicleta.controller.js
-│   │   ├── dtos/bicicleta.dto.js
-│   │   ├── middleware/
-│   │   ├── models/bicicleta.model.js
-│   │   ├── repositories/bicicleta.repository.js
-│   │   ├── routes/bicicleta.routes.js
-│   │   ├── services/bicicleta.service.js
-│   │   ├── app.js
-│   │   └── server.js
+├── parqueadero-service/            ← Microservicio Parqueadero (Spring Boot + MySQL)
+│   ├── src/main/java/com/cicloparqueadero/parqueadero/
+│   │   ├── controller/  BicicletaController, HealthController
+│   │   ├── service/     BicicletaService
+│   │   ├── repository/  BicicletaRepository
+│   │   ├── entity/      Bicicleta
+│   │   ├── dto/         BicicletaRequest, BicicletaDTO, StatsDTO, ApiResponse
+│   │   ├── security/    JwtUtil, JwtAuthFilter, AuthenticatedUser
+│   │   ├── config/      SecurityConfig
+│   │   ├── exception/   GlobalExceptionHandler
+│   │   └── ParqueaderoServiceApplication.java
+│   ├── src/main/resources/application.yml
+│   ├── pom.xml
 │   ├── Dockerfile
-│   ├── .env.example
-│   └── package.json
+│   └── .env.example
 │
-├── frontend/                    # React + Vite + Nginx
-│   ├── src/
-│   │   ├── api/                 # Clientes Axios
-│   │   ├── components/          # Layout y UI reutilizable
-│   │   ├── context/AuthContext.jsx
-│   │   ├── pages/               # Login, Register, Dashboard, Bicicletas, Usuarios
-│   │   ├── styles/globals.css
-│   │   ├── App.jsx
-│   │   └── main.jsx
+├── frontend/                       ← Spring Boot + Thymeleaf
+│   ├── src/main/java/com/cicloparqueadero/frontend/
+│   │   ├── controller/   AuthWebController, DashboardController, BicicletaWebController, UsuariosWebController, HealthWebController
+│   │   ├── client/       AuthApiClient, ParqueaderoApiClient (WebClient)
+│   │   ├── model/        UserSession, BicicletaView, StatsView
+│   │   ├── interceptor/  AuthInterceptor, GlobalAttributesAdvice
+│   │   ├── config/       WebClientConfig, WebMvcConfig
+│   │   ├── util/         ApiErrorParser
+│   │   └── FrontendApplication.java
+│   ├── src/main/resources/
+│   │   ├── application.yml
+│   │   ├── templates/    login, register, dashboard, bicicletas/*, usuarios, error, fragments/layout
+│   │   └── static/css/main.css
+│   ├── pom.xml
 │   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── vite.config.js
-│   ├── index.html
-│   ├── .env.example
-│   └── package.json
+│   └── .env.example
 │
 ├── docker-compose.yml
+├── render.yaml                     ← Blueprint para despliegue
+├── DEPLOY.md                       ← Guía de despliegue paso a paso
 ├── .env.example
 ├── .gitignore
 └── README.md
@@ -176,72 +171,67 @@ Parqueadero/
 ## 📦 Requisitos previos
 
 - **Docker Desktop** (Windows / macOS) o **Docker Engine + Docker Compose** (Linux).
-- Puertos libres: `5173`, `4001`, `4002`, `5432`, `3306`.
-- (Opcional para desarrollo manual) Node.js **20+**.
+- Puertos libres: `8080`, `4001`, `4002`, `5432`, `3306`.
+- (Opcional para desarrollo manual) **Java 17** + **Maven 3.9+**.
 
 ---
 
 ## 🚀 Instalación y ejecución con Docker (recomendado)
 
-### 1. Clonar / descargar el proyecto
+### 1. Clonar el repo
 
 ```bash
-cd Parqueadero
+git clone https://github.com/AlejandroVc22/ParqueaderoCiclas.git
+cd ParqueaderoCiclas
 ```
 
-### 2. (Opcional) Copiar el archivo de variables
+### 2. (Opcional) Copiar variables de entorno
 
 ```bash
 cp .env.example .env
 ```
 
-> Si no creas el `.env`, el `docker-compose.yml` usará valores por defecto, que ya son funcionales.
+Si no creas el `.env`, los valores por defecto del `docker-compose.yml` son funcionales.
 
-### 3. Levantar todo el stack
+### 3. Levantar todo
 
 ```bash
 docker-compose up --build
 ```
 
-Esto va a:
+> ⏱️ La primera vez tarda **5-10 minutos** porque descarga imágenes Maven, Postgres, MySQL y compila los 3 proyectos.
 
-1. Construir la imagen de cada microservicio y del frontend.
+Esto va a:
+1. Construir las 3 imágenes (auth, parqueadero, frontend) con multi-stage Maven.
 2. Iniciar **PostgreSQL** y **MySQL** (con healthchecks).
 3. Iniciar `auth-service` (puerto **4001**) y crear automáticamente el admin.
 4. Iniciar `parqueadero-service` (puerto **4002**).
-5. Iniciar el **frontend** servido por Nginx en el puerto **5173**.
+5. Iniciar el **frontend Spring Boot** en el puerto **8080**.
 
 ### 4. Abrir en el navegador
 
 ```
-http://localhost:5173
+http://localhost:8080
 ```
 
-### 5. Detener el stack
+### 5. Detener
 
 ```bash
-docker-compose down
-```
-
-Para borrar también los datos de las bases de datos:
-
-```bash
-docker-compose down -v
+docker-compose down            # detiene
+docker-compose down -v         # detiene + borra las bases de datos
 ```
 
 ---
 
-## 🧑‍💻 Ejecución manual (sin Docker)
-
-> Útil si quieres desarrollar con `nodemon`. Necesitarás PostgreSQL y MySQL instalados localmente.
+## 🧑‍💻 Ejecución manual sin Docker
 
 ### 1. Auth-service
 
 ```bash
 cd auth-service
-cp .env.example .env  # ajusta credenciales
-npm install
-npm run dev           # http://localhost:4001
+cp .env.example .env
+mvn spring-boot:run
+# http://localhost:4001
 ```
 
 ### 2. Parqueadero-service
@@ -249,8 +239,8 @@ npm run dev           # http://localhost:4001
 ```bash
 cd parqueadero-service
 cp .env.example .env
-npm install
-npm run dev           # http://localhost:4002
+mvn spring-boot:run
+# http://localhost:4002
 ```
 
 ### 3. Frontend
@@ -258,8 +248,8 @@ npm run dev           # http://localhost:4002
 ```bash
 cd frontend
 cp .env.example .env
-npm install
-npm run dev           # http://localhost:5173
+mvn spring-boot:run
+# http://localhost:8080
 ```
 
 ---
@@ -291,6 +281,7 @@ Puedes registrar usuarios con rol `USER` desde la pantalla de **Registro**.
 | GET    | `/auth/users`          | ✅   | ADMIN    | Lista todos los usuarios              |
 | GET    | `/auth/validate`       | ✅   | Cualquiera| Valida un JWT                         |
 | GET    | `/health`              | ❌   | -        | Healthcheck                           |
+| GET    | `/actuator/health`     | ❌   | -        | Healthcheck Spring Actuator           |
 
 #### Body de ejemplo: `POST /auth/register`
 ```json
@@ -320,10 +311,10 @@ Puedes registrar usuarios con rol `USER` desde la pantalla de **Registro**.
 |--------|-----------------------|-------------|-----------------------------------|
 | GET    | `/bicicletas`         | USER, ADMIN | Lista bicicletas (filtros: `estado`, `search`) |
 | GET    | `/bicicletas/stats`   | USER, ADMIN | Totales por estado                |
-| GET    | `/bicicletas/:id`     | USER, ADMIN | Obtiene una bicicleta             |
+| GET    | `/bicicletas/{id}`    | USER, ADMIN | Obtiene una bicicleta             |
 | POST   | `/bicicletas`         | **ADMIN**   | Crea una bicicleta                |
-| PUT    | `/bicicletas/:id`     | **ADMIN**   | Actualiza una bicicleta           |
-| DELETE | `/bicicletas/:id`     | **ADMIN**   | Elimina una bicicleta             |
+| PUT    | `/bicicletas/{id}`    | **ADMIN**   | Actualiza una bicicleta           |
+| DELETE | `/bicicletas/{id}`    | **ADMIN**   | Elimina una bicicleta             |
 | GET    | `/health`             | -           | Healthcheck                       |
 
 #### Body de ejemplo: `POST /bicicletas`
@@ -344,11 +335,11 @@ Puedes registrar usuarios con rol `USER` desde la pantalla de **Registro**.
 
 ### Probar desde el navegador
 
-1. Abre `http://localhost:5173`.
+1. Abre `http://localhost:8080`.
 2. Inicia sesión con las **credenciales por defecto** o regístrate.
 3. Como **ADMIN** verás los módulos `Dashboard`, `Bicicletas` y `Usuarios`.
-4. Como **USER**, solo verás `Dashboard` y `Bicicletas` (sin acciones de editar/eliminar).
-5. Crea, edita y elimina bicicletas. Las estadísticas del dashboard se actualizan en tiempo real.
+4. Como **USER**, solo verás `Dashboard` y `Bicicletas` (sin acciones de crear/editar/eliminar).
+5. Crea, edita y elimina bicicletas. Las estadísticas del dashboard se actualizan automáticamente.
 
 ### Probar el API con curl
 
@@ -358,7 +349,7 @@ curl -X POST http://localhost:4001/auth/login \
   -H "Content-Type: application/json" \
   -d '{"correo":"admin@cicloparqueadero.com","password":"Admin123!"}'
 
-# 2. Listar bicicletas (usa el token recibido arriba)
+# 2. Listar bicicletas (usa el token recibido)
 curl http://localhost:4002/bicicletas \
   -H "Authorization: Bearer <TOKEN>"
 
@@ -369,14 +360,6 @@ curl -X POST http://localhost:4002/bicicletas \
   -d '{"propietario":"Carlos","documento":"123","tipo_bicicleta":"Urbana","color":"Azul"}'
 ```
 
-### Probar con Postman / Insomnia
-
-Importa la URL base de cada servicio y usa el token del login en el header:
-
-```
-Authorization: Bearer <jwt-recibido>
-```
-
 ---
 
 ## ⚙️ Variables de entorno
@@ -384,8 +367,8 @@ Authorization: Bearer <jwt-recibido>
 ### Globales (raíz / `docker-compose`)
 | Variable                    | Default                              |
 |-----------------------------|--------------------------------------|
-| `JWT_SECRET`                | `ciclo-parqueadero-super-secret-key…`|
-| `JWT_EXPIRES_IN`            | `24h`                                |
+| `JWT_SECRET`                | `ciclo-parqueadero-super-secret-...` |
+| `JWT_EXPIRATION_MS`         | `86400000` (24 h)                    |
 | `POSTGRES_DB`               | `auth_db`                            |
 | `POSTGRES_USER`             | `postgres`                           |
 | `POSTGRES_PASSWORD`         | `postgres`                           |
@@ -393,66 +376,23 @@ Authorization: Bearer <jwt-recibido>
 | `MYSQL_ROOT_PASSWORD`       | `root`                               |
 | `ADMIN_EMAIL`               | `admin@cicloparqueadero.com`         |
 | `ADMIN_PASSWORD`            | `Admin123!`                          |
-| `VITE_AUTH_API_URL`         | `http://localhost:4001`              |
-| `VITE_PARQUEADERO_API_URL`  | `http://localhost:4002`              |
 
-### Auth-service
-Ver [`auth-service/.env.example`](./auth-service/.env.example).
+Cada servicio tiene además su propio `.env.example` con valores específicos.
 
-### Parqueadero-service
-Ver [`parqueadero-service/.env.example`](./parqueadero-service/.env.example).
-
-### Frontend
-Ver [`frontend/.env.example`](./frontend/.env.example).
-> ⚠️ Las variables `VITE_*` se consumen **en build time** del frontend. Si cambias las URLs, vuelve a construir la imagen.
+> ⚠️ Para que el frontend conecte con los backends en docker-compose, las variables `AUTH_API_URL` y `PARQUEADERO_API_URL` apuntan a los nombres de los servicios (`http://auth-service:4001` y `http://parqueadero-service:4002`). En desarrollo local apuntan a `localhost`.
 
 ---
 
-## ☁️ Despliegue en la nube (Render / Railway)
+## ☁️ Despliegue en Render
 
-El proyecto está listo para desplegarse en cualquier proveedor que soporte Dockerfiles.
+Lee la guía completa paso a paso en [**`DEPLOY.md`**](./DEPLOY.md).
 
-### Opción A — Railway (recomendado, todo en un mismo proyecto)
+Resumen:
 
-1. Crea un proyecto nuevo en **Railway**.
-2. Añade un servicio **PostgreSQL** y otro **MySQL** desde el catálogo (Railway entrega `DATABASE_URL`, host, puerto, usuario y password).
-3. Crea **3 servicios** desde el repositorio (apuntando a cada Dockerfile):
-   - `auth-service` → carpeta `auth-service`.
-   - `parqueadero-service` → carpeta `parqueadero-service`.
-   - `frontend` → carpeta `frontend`.
-4. Configura las variables de entorno de cada servicio con los datos de las bases de Railway:
-   - `auth-service`: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `ADMIN_*`.
-   - `parqueadero-service`: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` (idéntico).
-   - `frontend`: build args `VITE_AUTH_API_URL` y `VITE_PARQUEADERO_API_URL` apuntando a las URLs públicas de los microservicios.
-5. Genera dominios públicos para los 3 servicios y vuelve a construir el frontend con esas URLs.
-
-### Opción B — Render
-
-1. Crea **PostgreSQL** y **MySQL** (el plan gratis de Render no incluye MySQL, puedes usar [PlanetScale](https://planetscale.com) o [Aiven](https://aiven.io)).
-2. Crea **3 Web Services** tipo Docker, uno por carpeta.
-3. Repite las variables de entorno como en Railway.
-4. Para el frontend, en *Build Command* deja vacío (lo hace el Dockerfile) y configura las build args `VITE_*`.
-
-### Notas de producción
-
-- Cambia `JWT_SECRET` por uno fuerte (mínimo 64 caracteres aleatorios).
-- Cambia `ADMIN_PASSWORD` después del primer login.
-- Activa HTTPS en el dominio público.
-- Cierra los puertos `5432` y `3306` al exterior (mantenlos solo en la red privada del proveedor).
-
----
-
-## 🛟 Solución de problemas
-
-| Problema | Solución |
-|----------|----------|
-| `auth-service` no conecta a Postgres | Espera ~30 s en el primer arranque o ejecuta `docker-compose up postgres` antes. El servicio reintenta 10 veces. |
-| `parqueadero-service` no conecta a MySQL | MySQL 8 tarda 30-60 s la primera vez. El servicio reintenta 15 veces; si persiste, revisa `docker logs cp_mysql`. |
-| Token inválido | Asegúrate de que **ambos microservicios** tienen el **mismo `JWT_SECRET`**. |
-| CORS bloqueado | Ambos servicios ya permiten `*`. Si modificas, ajusta `cors({ origin })` en `app.js`. |
-| Frontend muestra `Network Error` | Revisa que las variables `VITE_AUTH_API_URL` y `VITE_PARQUEADERO_API_URL` apunten a URLs accesibles desde el navegador. |
-| Cambié variables `VITE_*` y no aplican | Reconstruye el frontend: `docker-compose up --build frontend`. |
-| Quiero borrar la base de datos | `docker-compose down -v` |
+1. **MySQL externo** (Render no ofrece MySQL): aprovisiona uno gratis en **Railway**, **Aiven** o **Clever Cloud** y activa el **Public Networking** para obtener `host` + `puerto` públicos.
+2. **Render Blueprint**: en el dashboard, **New + → Blueprint** → conecta el repo → Render lee el `render.yaml`.
+3. **Variables a llenar**: el Blueprint pedirá los datos del MySQL externo y las URLs públicas de los backends para el frontend.
+4. **Apply** → ~10 minutos → **Live** ✅
 
 ---
 
@@ -462,4 +402,4 @@ Proyecto académico / educativo. Libre para usar, modificar y distribuir.
 
 ---
 
-> Hecho con ❤️ para el examen final de Full-Stack & Microservicios.
+> Hecho con ❤️ usando **Spring Boot 3 + Java 17 + Thymeleaf** para el examen final de Full-Stack & Microservicios.

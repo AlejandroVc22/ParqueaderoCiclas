@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Usuarios | Ciclo-Parqueadero')}"></head>
+<body>
+
+<div class="app-shell">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/layout :: navbar}"></header>
+
+        <main class="app-content">
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <div class="page">
+                <div class="page-header">
+                    <div>
+                        <h1>Usuarios</h1>
+                        <p class="muted">Cuentas registradas en el sistema.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nombre</th>
+                                <th>Correo</th>
+                                <th>Rol</th>
+                                <th>Registrado</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${#lists.isEmpty(usuarios)}">
+                                <td colspan="5" class="empty-row">Sin usuarios.</td>
+                            </tr>
+                            <tr th:each="u : ${usuarios}">
+                                <td th:text="${u.id}">1</td>
+                                <td class="cell-strong" th:text="${u.nombre}">Nombre</td>
+                                <td th:text="${u.correo}">correo@x.com</td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${u.rol == 'ADMIN'} ? ' badge-info' : ' badge-default'"
+                                          th:text="${u.rol}">USER</span>
+                                </td>
+                                <td th:text="${u.createdAt != null ? #temporals.format(u.createdAt,'dd/MM/yyyy HH:mm') : '—'}">—</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+</body>
+</html>

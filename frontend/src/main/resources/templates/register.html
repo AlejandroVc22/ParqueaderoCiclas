@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Crear cuenta | Ciclo-Parqueadero')}"></head>
+<body>
+
+<div class="auth-page">
+    <div class="auth-aside">
+        <div class="auth-aside-content">
+            <div class="auth-logo">🚲</div>
+            <h1>Crea tu cuenta</h1>
+            <p>
+                Únete a Ciclo-Parqueadero y comienza a administrar tu flota de bicicletas con
+                herramientas modernas y seguras.
+            </p>
+            <ul class="auth-features">
+                <li>✓ Registro gratis</li>
+                <li>✓ Acceso inmediato a tu panel</li>
+                <li>✓ Datos protegidos con JWT y BCrypt</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="auth-card-wrapper">
+        <form class="auth-card" th:action="@{/register}" method="post">
+            <h2>Crear cuenta</h2>
+            <p class="auth-subtitle">Completa el formulario para registrarte.</p>
+
+            <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+            <div class="form-field">
+                <label>Nombre completo</label>
+                <div class="input-icon">
+                    <span class="icon">👤</span>
+                    <input type="text" name="nombre" placeholder="Tu nombre" required />
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label>Correo electrónico</label>
+                <div class="input-icon">
+                    <span class="icon">✉</span>
+                    <input type="email" name="correo" placeholder="ejemplo@correo.com" required />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Contraseña</label>
+                    <div class="input-icon">
+                        <span class="icon">🔒</span>
+                        <input type="password" name="password" placeholder="Mínimo 6" required />
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label>Confirmar</label>
+                    <div class="input-icon">
+                        <span class="icon">🔒</span>
+                        <input type="password" name="confirm" placeholder="Repite la contraseña" required />
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-block" type="submit">+ Crear cuenta</button>
+
+            <p class="auth-footer">
+                ¿Ya tienes cuenta? <a th:href="@{/login}">Inicia sesión</a>
+            </p>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

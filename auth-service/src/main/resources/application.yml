@@ -1,0 +1,46 @@
+server:
+  port: ${PORT:4001}
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:auth_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      initialization-fail-timeout: 60000
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    show-sql: false
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:ciclo-parqueadero-super-secret-key-change-in-production-please}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  admin:
+    name: ${ADMIN_NAME:Administrador}
+    email: ${ADMIN_EMAIL:admin@cicloparqueadero.com}
+    password: ${ADMIN_PASSWORD:Admin123!}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    com.cicloparqueadero: DEBUG
+    org.springframework.security: INFO
