@@ -1,0 +1,6 @@
+# Forzar LF en archivos shell, dockerfiles y configs de nginx
+# para que funcionen correctamente en contenedores Linux.
+*.sh         text eol=lf
+*.template   text eol=lf
+Dockerfile   text eol=lf
+*.conf       text eol=lf

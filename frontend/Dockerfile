@@ -21,6 +21,7 @@ COPY docker-entrypoint.sh /docker-entrypoint.d/40-runtime-env.sh
 
 # Normaliza CRLF → LF (por si el archivo se editó en Windows) y da permisos.
 RUN sed -i 's/\r$//' /docker-entrypoint.d/40-runtime-env.sh \
+    && sed -i 's/\r$//' /etc/nginx/templates/default.conf.template \
     && chmod +x /docker-entrypoint.d/40-runtime-env.sh
 
 EXPOSE 80
