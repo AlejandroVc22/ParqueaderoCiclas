@@ -1,5 +1,4 @@
 server {
-    # Render asigna el puerto via $PORT; en local con Docker queda en 80.
     listen ${PORT};
     server_name _;
     root /usr/share/nginx/html;
@@ -15,13 +14,10 @@ server {
         try_files $uri =404;
     }
 
-    # SPA fallback: todas las rutas devuelven index.html.
+    # Servir todos los assets estáticos y el SPA fallback con una sola location.
+    # Nginx intenta servir el archivo exacto y si no existe, devuelve index.html
+    # (necesario para rutas SPA como /dashboard, /bicicletas, etc.).
     location / {
         try_files $uri $uri/ /index.html;
-    }
-
-    location ~* \.(?:js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|ico)$ {
-        expires 7d;
-        add_header Cache-Control "public, immutable";
     }
 }
