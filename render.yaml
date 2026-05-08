@@ -126,13 +126,10 @@ services:
     dockerfilePath: ./Dockerfile
     autoDeploy: true
     envVars:
+      # NOTA: Render no expone una propiedad para la URL pública completa,
+      # así que las definimos explícitamente. Si los servicios tienen sufijos
+      # (ej: cp-auth-service-XXXX), edítalas en el dashboard de Render.
       - key: AUTH_API_URL
-        fromService:
-          name: cp-auth-service
-          type: web
-          property: host        # → https://cp-auth-service.onrender.com
+        sync: false   # → pega aquí la URL pública del cp-auth-service
       - key: PARQUEADERO_API_URL
-        fromService:
-          name: cp-parqueadero-service
-          type: web
-          property: host        # → https://cp-parqueadero-service.onrender.com
+        sync: false   # → pega aquí la URL pública del cp-parqueadero-service
